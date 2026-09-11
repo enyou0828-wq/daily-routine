@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<title>每日任務</title>
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2a78d6">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="due-banner" id="due-banner" hidden></div>
+
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">◆</span>
+      <span class="brand-name">每日任務</span>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="today" role="tab" aria-selected="true">今日總覽</button>
+      <button class="tab" data-tab="tasks" role="tab" aria-selected="false">任務管理</button>
+      <button class="tab" data-tab="review" role="tab" aria-selected="false">每週回顧</button>
+    </nav>
+  </header>
+
+  <main>
+
+    <!-- ===== TODAY TAB ===== -->
+    <section class="panel active" id="panel-today">
+      <div class="panel-head">
+        <h1 id="today-title">今日總覽</h1>
+      </div>
+      <p class="hint-line">提醒需要保持這個分頁開著才會跳出通知。</p>
+      <div class="notify-row">
+        <button class="btn ghost small" id="btn-enable-notify">啟用系統通知</button>
+        <button class="btn ghost small" id="btn-test-notify">測試通知</button>
+        <span class="notify-status" id="notify-status"></span>
+      </div>
+      <div class="timeline" id="today-timeline"></div>
+      <p class="empty-hint" id="today-empty" hidden>今天還沒有任何固定任務，先到「任務管理」新增一個吧。</p>
+    </section>
+
+    <!-- ===== TASKS TAB ===== -->
+    <section class="panel" id="panel-tasks">
+      <div class="panel-head">
+        <h1>任務管理</h1>
+        <button class="btn primary" id="btn-add-task">＋ 新增任務</button>
+      </div>
+      <div class="task-list" id="task-list"></div>
+      <p class="empty-hint" id="task-empty" hidden>還沒有任務，點右上角新增一個吧。</p>
+    </section>
+
+    <!-- ===== REVIEW TAB ===== -->
+    <section class="panel" id="panel-review">
+      <div class="panel-head">
+        <h1>每週回顧</h1>
+      </div>
+
+      <div class="review-stats" id="review-stats"></div>
+
+      <div class="review-form-card">
+        <h2 id="review-week-label">本週回顧</h2>
+        <div id="review-questions"></div>
+        <button class="btn primary" id="btn-save-review">儲存這週回顧</button>
+        <p class="save-hint" id="review-save-hint"></p>
+      </div>
+
+      <div class="review-history">
+        <h2>歷史回顧</h2>
+        <div id="review-history-list"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ===== TASK EDIT MODAL ===== -->
+<div class="modal-backdrop" id="task-modal-backdrop" hidden>
+  <div class="modal">
+    <h2 id="task-modal-title">新增任務</h2>
+    <label class="field">
+      <span>任務名稱</span>
+      <input type="text" id="task-name" placeholder="例如：晨間閱讀">
+    </label>
+    <label class="field">
+      <span>提醒時間</span>
+      <input type="time" id="task-time" value="07:00">
+    </label>
+    <label class="field checkbox-field">
+      <input type="checkbox" id="task-no-time">
+      <span>不指定時間（整天都可以做）</span>
+    </label>
+    <label class="field">
+      <span>重複日</span>
+      <div class="day-picker" id="task-days"></div>
+    </label>
+    <label class="field checkbox-field">
+      <input type="checkbox" id="task-enabled" checked>
+      <span>啟用提醒</span>
+    </label>
+    <div class="modal-actions">
+      <button class="btn ghost" id="btn-delete-task" hidden>刪除</button>
+      <div class="spacer"></div>
+      <button class="btn ghost" id="btn-cancel-task">取消</button>
+      <button class="btn primary" id="btn-save-task">儲存</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
