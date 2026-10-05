@@ -77,24 +77,6 @@ function dateKey(d) {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
-function weekStartOf(d) {
-  const day = d.getDay();
-  const diffToMonday = day === 0 ? -6 : 1 - day;
-  const monday = new Date(d);
-  monday.setDate(d.getDate() + diffToMonday);
-  monday.setHours(0, 0, 0, 0);
-  return monday;
-}
-
-function weekKeyOf(d) {
-  return dateKey(weekStartOf(d));
-}
-
-// 回顧的目標週：平常就是本週，但週一（結算後）要指向剛結束的上一週
-function reviewWeekStartOf(d) {
-  return weekStartOf(new Date(d.getTime() - 24 * 60 * 60 * 1000));
-}
-
 function nowHHMM() {
   const n = new Date();
   return `${pad2(n.getHours())}:${pad2(n.getMinutes())}`;
@@ -212,13 +194,6 @@ function checkSchedule() {
     renderToday();
   }
 
-  const wk = dateKey(reviewWeekStartOf(now));
-  if (data.review.time === hhmm && data.review.day === dow && !data.fired.review[wk]) {
-    data.fired.review[wk] = true;
-    changed = true;
-    notify('每週回顧時間到了', '花幾分鐘回顧這一週吧');
-  }
-
   if (changed) persist();
 }
 
@@ -234,7 +209,7 @@ function setupTabs() {
       tab.classList.add('active');
       tab.setAttribute('aria-selected', 'true');
       document.getElementById(`panel-${tab.dataset.tab}`).classList.add('active');
-      if (tab.dataset.tab === 'review') renderReview();
+      if (tab.dataset.tab === 'pet') petRender();
     });
   });
 }
@@ -276,6 +251,7 @@ function renderToday() {
     check.addEventListener('click', async () => {
       if (!data.logs[todayKey]) data.logs[todayKey] = {};
       data.logs[todayKey][task.id] = !done;
+      if (!done) petOnTaskDone(task, todayKey);
       await persist();
       renderToday();
     });
@@ -437,185 +413,6 @@ async function deleteTaskFromModal() {
   renderToday();
 }
 
-// ---------- Review ----------
-function computeWeekStats(weekStart) {
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 6);
-  const today = new Date();
-  const rangeEnd = today < weekEnd ? today : weekEnd;
-
-  let total = 0, done = 0;
-  const perTask = {};
-
-  for (const task of data.tasks) {
-    if (!task.enabled) continue;
-    if (!perTask[task.name]) perTask[task.name] = { name: task.name, total: 0, done: 0 };
-  }
-
-  for (let d = new Date(weekStart); d <= rangeEnd; d.setDate(d.getDate() + 1)) {
-    const dow = d.getDay();
-    const dKey = dateKey(d);
-    for (const task of data.tasks) {
-      if (!task.enabled || !task.days.includes(dow)) continue;
-      total++;
-      perTask[task.name].total++;
-      const isDone = !!(data.logs[dKey] && data.logs[dKey][task.id]);
-      if (isDone) { done++; perTask[task.name].done++; }
-    }
-  }
-
-  return { total, done, perTask, weekStart, weekEnd };
-}
-
-function formatDateShort(d) { return `${d.getMonth() + 1}/${d.getDate()}`; }
-
-function renderReviewStats() {
-  const weekStart = reviewWeekStartOf(new Date());
-  const stats = computeWeekStats(weekStart);
-  const pct = stats.total ? Math.round((stats.done / stats.total) * 100) : 0;
-
-  const container = document.getElementById('review-stats');
-  container.innerHTML = '';
-
-  const overallCard = document.createElement('div');
-  overallCard.className = 'stat-card';
-  overallCard.innerHTML = `
-    <div class="label">本週完成率 (${formatDateShort(stats.weekStart)} - ${formatDateShort(stats.weekEnd)})</div>
-    <div class="value">${pct}%</div>
-    <div class="label">${stats.done} / ${stats.total} 次</div>
-  `;
-
-  const breakdownCard = document.createElement('div');
-  breakdownCard.className = 'stat-card';
-  breakdownCard.style.flex = '2';
-  const label = document.createElement('div');
-  label.className = 'label';
-  label.textContent = '各任務完成率';
-  breakdownCard.appendChild(label);
-  const breakdown = document.createElement('div');
-  breakdown.className = 'stat-breakdown';
-  const perTaskList = Object.values(stats.perTask).filter((t) => t.total > 0);
-  if (perTaskList.length === 0) {
-    const none = document.createElement('div');
-    none.className = 'label';
-    none.textContent = '本週尚無資料';
-    breakdown.appendChild(none);
-  }
-  for (const t of perTaskList) {
-    const tpct = Math.round((t.done / t.total) * 100);
-    const row = document.createElement('div');
-    row.className = 'stat-bar-row';
-    row.innerHTML = `
-      <div class="stat-bar-name" title="${t.name}">${t.name}</div>
-      <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${tpct}%"></div></div>
-      <div class="stat-bar-pct">${tpct}%</div>
-    `;
-    breakdown.appendChild(row);
-  }
-  breakdownCard.appendChild(breakdown);
-
-  container.append(overallCard, breakdownCard);
-  return { stats, pct };
-}
-
-function renderReviewForm(currentStats) {
-  const weekStart = reviewWeekStartOf(new Date());
-  const wk = dateKey(weekStart);
-  const isPastWeek = wk !== dateKey(weekStartOf(new Date()));
-  document.getElementById('review-week-label').textContent =
-    `${isPastWeek ? '上週回顧' : '本週回顧'}（${formatDateShort(weekStart)} - ${formatDateShort(currentStats.stats.weekEnd)}）`;
-
-  const existing = data.review.entries.find((e) => e.weekKey === wk);
-  const container = document.getElementById('review-questions');
-  container.innerHTML = '';
-
-  data.review.questions.forEach((q, i) => {
-    const wrap = document.createElement('div');
-    wrap.className = 'review-question';
-    const label = document.createElement('label');
-    label.textContent = q;
-    const textarea = document.createElement('textarea');
-    textarea.dataset.qIndex = String(i);
-    textarea.value = existing ? (existing.answers[i] || '') : '';
-    wrap.append(label, textarea);
-    container.appendChild(wrap);
-  });
-
-  document.getElementById('review-save-hint').textContent = '';
-}
-
-async function saveReviewEntry(currentStats) {
-  const wk = dateKey(currentStats.stats.weekStart);
-  const textareas = document.querySelectorAll('#review-questions textarea');
-  const answers = Array.from(textareas).map((t) => t.value);
-
-  const pct = currentStats.stats.total
-    ? Math.round((currentStats.stats.done / currentStats.stats.total) * 100)
-    : 0;
-
-  const entry = {
-    weekKey: wk,
-    weekStart: dateKey(currentStats.stats.weekStart),
-    weekEnd: dateKey(currentStats.stats.weekEnd),
-    answers,
-    completionRate: pct,
-    createdAt: new Date().toISOString()
-  };
-
-  const idx = data.review.entries.findIndex((e) => e.weekKey === wk);
-  if (idx >= 0) data.review.entries[idx] = entry;
-  else data.review.entries.push(entry);
-
-  await persist();
-  document.getElementById('review-save-hint').textContent = '已儲存';
-  renderReviewHistory();
-}
-
-function renderReviewHistory() {
-  const list = document.getElementById('review-history-list');
-  list.innerHTML = '';
-  const entries = data.review.entries.slice().sort((a, b) => b.weekKey.localeCompare(a.weekKey));
-
-  if (entries.length === 0) {
-    const none = document.createElement('p');
-    none.className = 'empty-hint';
-    none.textContent = '還沒有歷史回顧紀錄。';
-    list.appendChild(none);
-    return;
-  }
-
-  for (const entry of entries) {
-    const card = document.createElement('div');
-    card.className = 'history-entry';
-
-    const head = document.createElement('div');
-    head.className = 'history-entry-head';
-    head.innerHTML = `
-      <div class="history-entry-week">${entry.weekStart} ~ ${entry.weekEnd}</div>
-      <div class="history-entry-rate">完成率 ${entry.completionRate}%</div>
-    `;
-    card.appendChild(head);
-
-    entry.answers.forEach((a, i) => {
-      if (!a) return;
-      const qText = data.review.questions[i] || `問題 ${i + 1}`;
-      const qa = document.createElement('div');
-      qa.className = 'history-qa';
-      qa.innerHTML = `<div class="q">${qText}</div><div class="a"></div>`;
-      qa.querySelector('.a').textContent = a;
-      card.appendChild(qa);
-    });
-
-    list.appendChild(card);
-  }
-}
-
-function renderReview() {
-  const { stats, pct } = renderReviewStats();
-  renderReviewForm({ stats, pct });
-  renderReviewHistory();
-}
-
 // ---------- Notifications ----------
 function updateNotifyStatus() {
   const el = document.getElementById('notify-status');
@@ -667,11 +464,13 @@ function testNotify() {
 // ---------- Init ----------
 async function init() {
   data = loadData();
+  petInit();
   updateNotifyStatus();
   document.getElementById('btn-enable-notify').addEventListener('click', enableNotifications);
   document.getElementById('btn-test-notify').addEventListener('click', testNotify);
 
   setupTabs();
+  petRender();
   renderToday();
   renderTaskList();
 
@@ -679,11 +478,6 @@ async function init() {
   document.getElementById('btn-cancel-task').addEventListener('click', closeTaskModal);
   document.getElementById('btn-save-task').addEventListener('click', saveTaskFromModal);
   document.getElementById('btn-delete-task').addEventListener('click', deleteTaskFromModal);
-
-  document.getElementById('btn-save-review').addEventListener('click', () => {
-    const stats = computeWeekStats(reviewWeekStartOf(new Date()));
-    saveReviewEntry({ stats });
-  });
 
   checkSchedule();
   setInterval(checkSchedule, 20 * 1000);

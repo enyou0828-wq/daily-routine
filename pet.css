@@ -1,0 +1,160 @@
+/* ---------- 三頭龍寵物 ---------- */
+.pet-tab-dot {
+  display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--critical); margin-left: 5px; vertical-align: 2px;
+}
+.pet-name { cursor: pointer; }
+.pet-name:hover { text-decoration: underline dotted; }
+.pet-chip {
+  font-size: 12px; padding: 4px 10px; border-radius: 999px;
+  background: var(--gridline); color: var(--text-secondary);
+}
+.pet-naming { display: flex; gap: 8px; margin: -6px 0 14px; }
+.pet-naming input {
+  flex: 1; max-width: 260px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+  background: var(--surface-raised); color: var(--text-primary); padding: 6px 10px; font: inherit;
+}
+
+
+.pet-speech {
+  margin: 10px 0 14px; padding: 10px 14px; font-size: 14px;
+  background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-md);
+}
+.pet-speech b { color: var(--series-1); }
+
+
+.pet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 640px) { .pet-grid { grid-template-columns: 1fr; } }
+
+.pet-card {
+  background: var(--surface-raised); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 12px;
+}
+.pet-grid .pet-card { margin-bottom: 0; }
+.pet-grid { margin-bottom: 12px; }
+.pet-card-title { font-weight: 600; font-size: 14px; margin-bottom: 10px; }
+.pet-sub { font-size: 12px; color: var(--text-muted); font-weight: 400; }
+.pet-note { font-size: 12px; color: var(--text-muted); margin: 8px 0 0; }
+.pet-limit { color: var(--critical); }
+
+.pet-bar { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 6px; }
+.pet-bar-label { width: 76px; flex-shrink: 0; color: var(--text-secondary); }
+.pet-bar-track {
+  flex: 1; height: 10px; background: var(--gridline); overflow: hidden;
+  /* 切成一格一格的像素條 */
+  -webkit-mask: repeating-linear-gradient(90deg, #000 0 6px, transparent 6px 8px);
+          mask: repeating-linear-gradient(90deg, #000 0 6px, transparent 6px 8px);
+}
+.pet-bar-fill { height: 100%; }
+.pet-bar-fill.ok { background: var(--series-2); }
+.pet-bar-fill.warn { background: var(--series-3); }
+.pet-bar-fill.bad { background: var(--critical); }
+.pet-bar-val { width: 28px; text-align: right; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+.pet-growth-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+@media (max-width: 520px) { .pet-growth-row { grid-template-columns: repeat(2, 1fr); } }
+.pet-big { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pet-big small { font-size: 12px; font-weight: 400; color: var(--text-muted); }
+
+.pet-filter { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+.pet-filter-btn {
+  border: none; background: transparent; color: var(--text-secondary);
+  font-size: 12px; padding: 5px 11px; border-radius: 999px; cursor: pointer;
+}
+.pet-filter-btn:hover { background: var(--gridline); }
+.pet-filter-btn.active { background: var(--text-primary); color: var(--surface-1); }
+
+.pet-inv { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.pet-item {
+  display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto auto;
+  column-gap: 8px; align-items: center; text-align: left;
+  border: 1px solid var(--border); background: var(--page-plane); color: var(--text-primary);
+  border-radius: var(--radius-sm); padding: 8px 10px; cursor: pointer; font: inherit;
+}
+.pet-item:hover { border-color: var(--baseline); }
+.pet-item.rare { border-color: var(--series-3); }
+.pet-item-icon { grid-row: 1 / 3; font-size: 22px; }
+.pet-item-name { font-size: 13px; }
+.pet-item-n { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.pet-item-fx { grid-column: 2 / 4; font-size: 11px; color: var(--text-muted); }
+
+.pet-details summary { cursor: pointer; margin-bottom: 0; }
+.pet-details[open] summary { margin-bottom: 10px; }
+.pet-droplist { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.8; }
+.pet-log { max-height: 260px; overflow-y: auto; font-size: 13px; }
+.pet-log-row { padding: 4px 0; border-bottom: 1px solid var(--gridline); }
+.pet-log-t { color: var(--text-muted); font-variant-numeric: tabular-nums; margin-right: 10px; font-size: 12px; }
+
+.pet-toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px);
+  background: var(--text-primary); color: var(--surface-1); padding: 10px 18px;
+  border-radius: 999px; font-size: 13px; opacity: 0; pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s; z-index: 120; max-width: 90%;
+}
+.pet-toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+
+.pet-stage-hint { margin: 6px 0 0; }
+.pet-pick-rec {
+  position: absolute; top: 6px; right: 6px; z-index: 1; font-size: 10px; padding: 1px 6px; border-radius: 999px;
+  background: var(--series-2); color: #fff;
+}
+
+/* 像素場景 */
+.pet-stage {
+  line-height: 0; background: #10162c;
+  border: 4px solid var(--text-primary);
+  box-shadow: 4px 4px 0 0 var(--baseline);
+  margin-right: 4px;
+}
+.pet-canvas {
+  width: 100%; height: auto; display: block; cursor: pointer;
+  image-rendering: pixelated; image-rendering: crisp-edges;
+}
+.pet-speech, .pet-card, .pet-item, .pet-buy { border-radius: 0; }
+.pet-speech { border: 2px solid var(--text-primary); box-shadow: 3px 3px 0 0 var(--baseline); }
+
+/* 寵物頁：左邊場景、右邊背包 */
+.app:has(#panel-pet.active) { max-width: 1240px; }
+.pet-main { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: start; }
+.pet-side { position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; }
+.pet-side .pet-inv { grid-template-columns: 1fr; }
+@media (max-width: 900px) {
+  .pet-main { grid-template-columns: 1fr; }
+  .pet-side { position: static; max-height: none; }
+  .pet-side .pet-inv { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+}
+.pet-stage-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 6px 0 0; }
+.pet-stage-bar .pet-stage-hint { margin: 0; }
+.pet-mode-btn {
+  flex-shrink: 0; font: inherit; font-size: 12px; padding: 4px 10px; cursor: pointer;
+  border: 2px solid var(--text-primary); background: var(--surface-raised); color: var(--text-primary);
+  box-shadow: 2px 2px 0 0 var(--baseline);
+}
+
+/* 拖曳背包物品 */
+.pet-side .pet-item { cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+body.pet-dragging, body.pet-dragging * { cursor: grabbing !important; user-select: none; }
+.pet-drag-ghost {
+  position: fixed; left: 0; top: 0; z-index: 200; pointer-events: none;
+  font-size: 30px; line-height: 1; margin: -15px 0 0 -15px;
+  filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.35));
+}
+.pet-canvas.drop-ok { outline: 3px dashed var(--series-2); outline-offset: -3px; }
+
+/* 商店 */
+.pet-shop-head { display: flex; align-items: center; justify-content: space-between; }
+.pet-coins { font-variant-numeric: tabular-nums; font-size: 15px; font-weight: 700; }
+.pet-shop-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.pet-buy {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 4px 6px; cursor: pointer; font: inherit;
+  border: 1px solid var(--border); background: var(--page-plane); color: var(--text-primary);
+}
+.pet-buy:hover { border-color: var(--series-1); }
+.pet-buy.rare { border-color: var(--series-3); }
+.pet-buy.poor { opacity: 0.45; }
+.pet-buy-icon { font-size: 20px; line-height: 1.1; }
+.pet-buy-name { font-size: 12px; }
+.pet-buy-price { font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.pet-buy .pet-pick-rec { top: 2px; right: 2px; }

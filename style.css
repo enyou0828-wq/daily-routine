@@ -159,46 +159,6 @@ body {
 }
 .day-chip.active { background: var(--series-1); border-color: var(--series-1); color: #fff; }
 
-/* ---------- Review ---------- */
-.review-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
-.stat-card {
-  flex: 1; min-width: 140px; background: var(--surface-raised); border: 1px solid var(--border);
-  border-radius: var(--radius-md); padding: 16px;
-}
-.stat-card .label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
-.stat-card .value { font-size: 24px; font-weight: 700; }
-.stat-breakdown { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
-.stat-bar-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
-.stat-bar-name { width: 100px; flex-shrink: 0; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.stat-bar-track { flex: 1; height: 8px; border-radius: 4px; background: var(--gridline); overflow: hidden; }
-.stat-bar-fill { height: 100%; background: var(--series-2); }
-.stat-bar-pct { width: 36px; text-align: right; color: var(--text-muted); }
-
-.review-form-card {
-  background: var(--surface-raised); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); padding: 20px; margin-bottom: 24px;
-}
-.review-form-card h2 { margin: 0 0 14px; font-size: 16px; }
-.review-question { margin-bottom: 14px; }
-.review-question label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; }
-.review-question textarea {
-  width: 100%; min-height: 64px; border-radius: var(--radius-sm); border: 1px solid var(--border);
-  background: var(--page-plane); color: var(--text-primary); padding: 10px; font: inherit; resize: vertical;
-}
-.save-hint { font-size: 12px; color: var(--good); min-height: 16px; margin: 8px 0 0; }
-
-.review-history h2 { font-size: 16px; }
-.history-entry {
-  background: var(--surface-raised); border: 1px solid var(--border);
-  border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 8px;
-}
-.history-entry-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.history-entry-week { font-weight: 600; font-size: 13px; }
-.history-entry-rate { font-size: 12px; color: var(--text-muted); }
-.history-qa { font-size: 13px; margin-bottom: 8px; }
-.history-qa .q { color: var(--text-muted); margin-bottom: 2px; }
-.history-qa .a { white-space: pre-wrap; }
-
 /* ---------- Modal ---------- */
 .modal-backdrop {
   position: fixed; inset: 0; background: rgba(0,0,0,0.4);

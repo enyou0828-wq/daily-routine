@@ -10,6 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#2a78d6">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="pet.css">
 </head>
 <body>
 
@@ -23,16 +24,18 @@
       <span class="brand-name">每日任務</span>
     </div>
     <nav class="tabs" role="tablist">
-      <button class="tab active" data-tab="today" role="tab" aria-selected="true">今日總覽</button>
+      <button class="tab active" data-tab="pet" role="tab" aria-selected="true">寵物</button>
+      <button class="tab" data-tab="today" role="tab" aria-selected="false">今日總覽</button>
       <button class="tab" data-tab="tasks" role="tab" aria-selected="false">任務管理</button>
-      <button class="tab" data-tab="review" role="tab" aria-selected="false">每週回顧</button>
     </nav>
   </header>
 
   <main>
 
+    <section class="panel active" id="panel-pet"></section>
+
     <!-- ===== TODAY TAB ===== -->
-    <section class="panel active" id="panel-today">
+    <section class="panel" id="panel-today">
       <div class="panel-head">
         <h1 id="today-title">今日總覽</h1>
       </div>
@@ -56,26 +59,6 @@
       <p class="empty-hint" id="task-empty" hidden>還沒有任務，點右上角新增一個吧。</p>
     </section>
 
-    <!-- ===== REVIEW TAB ===== -->
-    <section class="panel" id="panel-review">
-      <div class="panel-head">
-        <h1>每週回顧</h1>
-      </div>
-
-      <div class="review-stats" id="review-stats"></div>
-
-      <div class="review-form-card">
-        <h2 id="review-week-label">本週回顧</h2>
-        <div id="review-questions"></div>
-        <button class="btn primary" id="btn-save-review">儲存這週回顧</button>
-        <p class="save-hint" id="review-save-hint"></p>
-      </div>
-
-      <div class="review-history">
-        <h2>歷史回顧</h2>
-        <div id="review-history-list"></div>
-      </div>
-    </section>
 
   </main>
 </div>
@@ -113,6 +96,7 @@
   </div>
 </div>
 
+<script src="pet.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
