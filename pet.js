@@ -1,4 +1,4 @@
-// ===================== 三頭龍寵物 =====================
+// ===================== 寵物（三頭龍／九尾狐／鳳凰） =====================
 // 依賴 app.js 的全域：data, persist, notify, dateKey, pad2
 // 狀態以真實時間推進：每次打開或每 30 秒，從 pet.lastSim 補算到現在。
 
@@ -23,7 +23,7 @@ const PET_RATES = {
 const PET_NUTRIENTS = [
   { key: 'carb',    label: '澱粉',     lack: '沒力氣，容易累' },
   { key: 'protein', label: '蛋白質',   lack: '肌肉長不出來' },
-  { key: 'fat',     label: '脂肪',     lack: '鱗片乾裂' },
+  { key: 'fat',     label: '脂肪',     lack: '皮膚乾裂' },
   { key: 'vitamin', label: '綜合維生素', lack: '抵抗力變差' },
   { key: 'mineral', label: '微量金屬', lack: '骨頭和角長不硬' }
 ];
@@ -37,16 +37,54 @@ const PET_NEEDS = [
   { key: 'dirt',    label: '髒污度' }
 ];
 
-const PET_STAGES = [
-  { min: 0,   name: '雛龍' },
-  { min: 60,  name: '幼龍' },
-  { min: 200, name: '少年龍' },
-  { min: 420, name: '青年龍' },
-  { min: 680, name: '成年龍' },
-  { min: 900, name: '遠古三頭龍' }
-];
-
-const PET_HEADS = { left: '饞饞', mid: '睏睏', right: '傲傲' };
+// 開局可以選的三種寵物
+const PET_SPECIES = {
+  dragon: {
+    name: '三頭龍',
+    desc: '三顆頭三種個性：貪吃的饞饞、愛睏的睏睏、傲嬌的傲傲。長大會長出翅膀、角和一排背刺。',
+    stages: ['雛龍', '幼龍', '少年龍', '青年龍', '成年龍', '遠古三頭龍'],
+    voices: { left: '饞饞', mid: '睏睏', right: '傲傲' },
+    skin: '鱗片',
+    mouth: 90, bathDepth: 60,
+    hatch: '🥚 蛋殼裂開，三顆小小的頭同時探了出來！',
+    asleep: 'Zzz⋯⋯（三顆頭疊在一起睡）',
+    sick: '咳咳⋯⋯三顆頭都好暈⋯⋯',
+    sickLog: '生病了⋯⋯三顆頭都在發燒',
+    bath: '咕嚕咕嚕咕嚕（三顆頭輪流吐泡泡）',
+    idle: '另外兩顆頭好吵。'
+  },
+  fox: {
+    name: '九尾狐',
+    desc: '剛出生只有一條尾巴，照顧得好會一條一條長出來，最多九條；最後會變成銀白色的九尾天狐。',
+    stages: ['幼狐', '小狐', '少年狐', '青年狐', '成年狐', '九尾天狐'],
+    voices: { left: '狐狐', mid: '狐狐', right: '狐狐' },
+    skin: '毛',
+    mouth: 100, bathDepth: 45,
+    hatch: '🥚 蛋殼裂開，一團毛茸茸的小狐狸滾了出來！',
+    asleep: 'Zzz⋯⋯（用尾巴把自己捲成一團）',
+    sick: '嗚⋯⋯耳朵都垂下來了⋯⋯',
+    sickLog: '生病了⋯⋯耳朵都垂下來了',
+    bath: '咕嚕咕嚕（尾巴在水面上搖來搖去）',
+    idle: '我的尾巴是不是又多了一條？'
+  },
+  phoenix: {
+    name: '鳳凰',
+    desc: '從灰撲撲的雛鳥開始，尾羽和冠羽一根一根長出來、慢慢變紅，長大後羽尖會燃起火焰。',
+    stages: ['雛鳥', '幼鳥', '少年鳥', '青鸞', '火鳳', '不死鳳凰'],
+    voices: { left: '鳳鳳', mid: '鳳鳳', right: '鳳鳳' },
+    skin: '羽毛',
+    mouth: 62, bathDepth: 55,
+    hatch: '🥚 蛋殼裂開，一隻灰灰的小雛鳥探出頭來啾了一聲！',
+    asleep: 'Zzz⋯⋯（把頭埋進翅膀裡睡）',
+    sick: '啾⋯⋯羽毛都沒有光澤了⋯⋯',
+    sickLog: '生病了⋯⋯羽毛都沒有光澤了',
+    bath: '啪沙啪沙（拍著翅膀潑水）',
+    idle: '總有一天我會燒起來的！'
+  }
+};
+const PET_STAGE_MINS = [0, 60, 200, 420, 680, 900];
+function petSp(p) { return PET_SPECIES[(p && p.species) || 'dragon']; }
+function petStages(p) { return PET_STAGE_MINS.map((min, i) => ({ min, name: petSp(p).stages[i] })); }
 
 // effect: 直接加到 pet 上的差值；需求值負數 = 滿足
 const PET_ITEMS = {
@@ -107,9 +145,10 @@ function petClamp(v, lo = 0, hi = 100) { return Math.max(lo, Math.min(hi, v)); }
 function petPick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 function petLerp(a, b, t) { return a + (b - a) * t; }
 
-function petStage(growth) {
-  let s = PET_STAGES[0];
-  for (const st of PET_STAGES) if (growth >= st.min) s = st;
+function petStage(growth, p = data.pet) {
+  const stages = petStages(p);
+  let s = stages[0];
+  for (const st of stages) if (growth >= st.min) s = st;
   return s;
 }
 function petLevel(growth) { return Math.min(100, Math.floor(growth / 10) + 1); }
@@ -245,7 +284,7 @@ function petStep(p, dtH, t) {
   }
   if (!p.sick && p.health < 35) {
     p.sick = true;
-    petLog('生病了⋯⋯三顆頭都在發燒', t);
+    petLog(petSp(p).sickLog, t);
   } else if (p.sick && p.health >= 65) {
     p.sick = false;
     petLog('病好了！', t);
@@ -277,6 +316,7 @@ function petOnGrowthCrossed(before, after, t) {
 function petSimulate() {
   const p = data.pet;
   const now = Date.now();
+  if (p.phase === 'choose') { p.lastSim = now; return; }
   let t = Math.max(p.lastSim, now - PET_MAX_CATCHUP_H * 3600 * 1000);
 
   if (p.phase === 'egg') {
@@ -304,7 +344,7 @@ function petHatch(ts) {
   p.hatchedAt = ts;
   p.lastSim = ts;
   for (const [id, n] of Object.entries(PET_STARTER)) petAddItem(id, n);
-  petLog('🥚 蛋殼裂開，三顆小小的頭同時探了出來！', ts);
+  petLog(petSp(p).hatch, ts);
   petLog('獲得新手補給包', ts);
 }
 
@@ -508,8 +548,8 @@ function petPat() {
 // ---------- 台詞 ----------
 function petAutoSpeech(p) {
   if (p.phase === 'egg') return { head: 'mid', text: '（蛋裡傳來三種不同的心跳聲）' };
-  if (p.asleep) return { head: 'mid', text: 'Zzz⋯⋯（三顆頭疊在一起睡）' };
-  if (p.sick) return { head: 'mid', text: '咳咳⋯⋯三顆頭都好暈⋯⋯' };
+  if (p.asleep) return { head: 'mid', text: petSp(p).asleep };
+  if (p.sick) return { head: 'mid', text: petSp(p).sick };
   const n = p.needs;
   if (Math.max(n.bladder, n.bowel) >= 80) return { head: 'right', text: '快、快帶我去馬桶！不然我就⋯⋯' };
   if (n.hunger >= 75) return { head: 'left', text: '肚子在叫了⋯⋯有雞胸肉嗎？' };
@@ -522,7 +562,7 @@ function petAutoSpeech(p) {
     const lines = {
       carb: ['mid', '沒力氣⋯⋯想吃地瓜。'],
       protein: ['left', '好想吃雞胸肉，最近都長不大。'],
-      fat: ['right', '鱗片好乾，給我一點橄欖油。'],
+      fat: ['right', `${petSp(p).skin}好乾，給我一點橄欖油。`],
       vitamin: ['mid', '眼睛有點花，該吃綜合維生素了。'],
       mineral: ['left', '想啃石頭⋯⋯鐵礦石那種。']
     };
@@ -534,7 +574,7 @@ function petAutoSpeech(p) {
     ['mid', '曬太陽好舒服⋯⋯'],
     ['right', '哼，今天的你還算勤勞。'],
     ['left', '我覺得我又長大了一點點！'],
-    ['right', '另外兩顆頭好吵。'],
+    ['right', petSp(p).idle],
     ['mid', '（打了一個好大的哈欠）']
   ];
   const idx = Math.floor(Date.now() / 60000) % idle.length;
@@ -687,6 +727,128 @@ function petDrawDragon(p, opts = {}) {
   }
 
   return { svg: s, v };
+}
+
+// ---------- 九尾狐、鳳凰（座標系跟龍一樣：腳在 y=0、面朝右） ----------
+function petEyeState(p, blink) {
+  if (p.asleep) return 'closed';
+  if (p.sick) return 'sick';
+  if (blink) return 'closed';
+  if (p.needs.fatigue >= 60) return 'half';
+  return 'open';
+}
+
+function petEyeSVG(x, y, r, state, lid) {
+  const ink = '#1d2b22';
+  if (state === 'closed') return `<path d="M ${x - r} ${y} Q ${x} ${y + r * 0.9} ${x + r} ${y}" stroke="${ink}" stroke-width="${Math.max(1.8, r * 0.45)}" fill="none" stroke-linecap="round"/>`;
+  if (state === 'sick') return `<path d="M ${x - r} ${y - r} L ${x + r} ${y + r} M ${x + r} ${y - r} L ${x - r} ${y + r}" stroke="${ink}" stroke-width="${Math.max(1.8, r * 0.4)}" stroke-linecap="round"/>`;
+  let s = `<ellipse cx="${x}" cy="${y}" rx="${r}" ry="${r * 1.1}" fill="#fff"/><circle cx="${x + r * 0.25}" cy="${y + r * 0.1}" r="${r * 0.6}" fill="${ink}"/><circle cx="${x + r * 0.45}" cy="${y - r * 0.25}" r="${r * 0.2}" fill="#fff"/>`;
+  if (state === 'half') s += `<rect x="${x - r - 1}" y="${y - r * 1.3}" width="${2 * r + 2}" height="${r * 1.2}" fill="${lid}"/><path d="M ${x - r} ${y - r * 0.1} h ${2 * r}" stroke="${ink}" stroke-width="1.3"/>`;
+  return s;
+}
+
+function petDrawFox(p, opts = {}) {
+  const g = petClamp(p.growth / PET_GROWTH_MAX, 0, 1);
+  const leg = (opts.leg || 0) * 6;
+  // 奶油色 → 橘紅 → 最後的九尾天狐轉成銀白帶金
+  let h, sa, l;
+  if (g < 0.85) { const t = g / 0.85; h = petLerp(32, 22, t); sa = petLerp(60, 85, t); l = petLerp(74, 55, t); }
+  else { const t = (g - 0.85) / 0.15; h = petLerp(22, 44, t); sa = petLerp(85, 55, t); l = petLerp(55, 84, t); }
+  if (p.sick) { h -= 18; sa -= 25; }
+  const fur = petHsl(h, sa, l), furDark = petHsl(h, sa, l - 14), sock = petHsl(h, sa * 0.6, Math.max(18, l - 36));
+  const cream = '#fbf3e4', tip = g >= 0.85 ? '#f6d36b' : cream;
+  const headK = 1.35 - 0.35 * g, earK = 0.6 + 0.6 * g, tailK = 0.45 + 0.55 * g;
+  const tails = Math.min(9, 1 + Math.floor(g * 9));
+  const eyeR = (5.5 - 1.5 * g) * (opts.eyeK || 1);
+  let s = '';
+  // 遠側的腳
+  s += `<ellipse cx="${-20 - leg}" cy="-20" rx="8" ry="19" fill="${furDark}"/><ellipse cx="${42 - leg}" cy="-20" rx="8" ry="19" fill="${furDark}"/>`;
+  // 尾巴：一條一條往上散開
+  const L = 150 * tailK, W = 26 + 8 * g;
+  const spread = tails === 1 ? 0 : Math.min(100, 13 * (tails - 1));
+  for (let i = 0; i < tails; i++) {
+    const a = 222 - spread / 2 + (tails === 1 ? 0 : (i * spread) / (tails - 1));
+    s += `<g transform="translate(-48,-58) rotate(${a.toFixed(1)})"><path d="M 0 ${-W * 0.35} Q ${L * 0.45} ${-W} ${L} 0 Q ${L * 0.45} ${W} 0 ${W * 0.35} Z" fill="${i % 2 ? furDark : fur}"/><ellipse cx="${L * 0.86}" cy="0" rx="${L * 0.16}" ry="${W * 0.42}" fill="${tip}"/></g>`;
+  }
+  // 身體
+  s += `<ellipse cx="0" cy="-50" rx="50" ry="28" fill="${fur}"/><ellipse cx="16" cy="-42" rx="28" ry="15" fill="${cream}"/>`;
+  // 近側的腳＋深色襪子
+  for (const fx of [-32, 30]) {
+    s += `<ellipse cx="${fx + leg}" cy="-20" rx="9" ry="20" fill="${fur}"/><ellipse cx="${fx + leg + 1}" cy="-4" rx="9" ry="6" fill="${sock}"/>`;
+  }
+  // 頭
+  const n = p.needs;
+  let hd = '';
+  hd += `<path d="M -16 -12 L ${-12 - 4 * earK} ${-14 - 30 * earK} L 0 -16 Z" fill="${furDark}"/>`;
+  hd += `<path d="M -4 -16 L ${4} ${-18 - 32 * earK} L 14 -12 Z" fill="${fur}"/><path d="M 0 -17 L ${4} ${-14 - 24 * earK} L 9 -14 Z" fill="#f2a6a0"/>`;
+  hd += `<ellipse cx="0" cy="-4" rx="22" ry="19" fill="${fur}"/><ellipse cx="6" cy="6" rx="16" ry="10" fill="${cream}"/>`;
+  hd += `<path d="M 10 -8 L 40 2 L 12 12 Z" fill="${fur}"/><path d="M 12 3 L 40 2 L 14 12 Z" fill="${cream}"/><circle cx="40" cy="1" r="3.2" fill="#1d2b22"/>`;
+  hd += petEyeSVG(12, -6, eyeR, petEyeState(p, opts.blink), fur);
+  if (!p.asleep && !p.sick && n.hunger >= 60) hd += `<ellipse cx="28" cy="10" rx="4" ry="3" fill="#5a1f22"/>`;
+  else hd += `<path d="M 20 10 Q 26 13 32 9" stroke="#1d2b22" stroke-width="1.4" fill="none"/>`;
+  if (!p.sick && !p.asleep) hd += `<ellipse cx="2" cy="4" rx="4" ry="2.2" fill="#ff8fa3" opacity="0.45"/>`;
+  if (p.sick) hd += `<path d="M -16 -14 q 3 -6 3 0 a 3 3 0 1 1 -3 0 Z" fill="#9fd8ff"/>`;
+  s += `<g transform="translate(56,-80) scale(${headK})">${hd}</g>`;
+  return { svg: s };
+}
+
+function petDrawPhoenix(p, opts = {}) {
+  const g = petClamp(p.growth / PET_GROWTH_MAX, 0, 1);
+  const leg = (opts.leg || 0) * 5;
+  // 灰褐雛鳥 → 赤紅鳳凰
+  let h = petLerp(30, 6, g), sa = petLerp(18, 80, g), l = petLerp(68, 50, g);
+  if (p.sick) { h += 40; sa -= 25; }
+  const body = petHsl(h, sa, l), bodyDark = petHsl(h, sa, l - 14);
+  const belly = petHsl(petLerp(35, 38, g), petLerp(30, 90, g), petLerp(82, 62, g));
+  const gold = '#f2c14e', flame = g > 0.6;
+  const headK = 1.4 - 0.4 * g, tailK = 0.3 + 0.7 * g, wingK = 0.55 + 0.45 * g;
+  const tailN = Math.min(8, 2 + Math.floor(g * 7)), crestN = Math.min(5, 1 + Math.floor(g * 5));
+  const eyeR = (4.8 - 1.2 * g) * (opts.eyeK || 1);
+  const flameAt = (x, y, r) => `<path d="M ${x} ${y + r} Q ${x - r} ${y} ${x} ${y - r * 1.8} Q ${x + r} ${y} ${x} ${y + r} Z" fill="#ff7a1f"/><path d="M ${x} ${y + r * 0.6} Q ${x - r * 0.5} ${y} ${x} ${y - r} Q ${x + r * 0.5} ${y} ${x} ${y + r * 0.6} Z" fill="#ffd23f"/>`;
+  let s = '';
+  // 尾羽
+  const L = 150 * tailK;
+  for (let i = 0; i < tailN; i++) {
+    const a = 158 + (tailN === 1 ? 0 : (i * 46) / (tailN - 1));
+    const tipR = 5 + 6 * g;
+    s += `<g transform="translate(-26,-50) rotate(${a.toFixed(1)})"><path d="M 0 0 Q ${L * 0.5} ${i % 2 ? -8 : 8} ${L} 0" stroke="${i % 2 ? bodyDark : body}" stroke-width="${3 + 2.5 * g}" fill="none" stroke-linecap="round"/>`;
+    s += `<ellipse cx="${L}" cy="0" rx="${tipR}" ry="${tipR * 0.7}" fill="${gold}"/><ellipse cx="${L}" cy="0" rx="${tipR * 0.45}" ry="${tipR * 0.35}" fill="${bodyDark}"/>`;
+    if (flame) s += `<g transform="translate(${L + tipR},0) rotate(90)">${flameAt(0, 0, 3 + 4 * g)}</g>`;
+    s += '</g>';
+  }
+  // 腳
+  s += `<path d="M -6 -36 L ${-8 + leg} 0 M ${-8 + leg} 0 l -6 1 M ${-8 + leg} 0 l 6 1" stroke="#e0a030" stroke-width="4" fill="none" stroke-linecap="round"/>`;
+  s += `<path d="M 8 -36 L ${10 - leg} 0 M ${10 - leg} 0 l -6 1 M ${10 - leg} 0 l 6 1" stroke="#e0a030" stroke-width="4" fill="none" stroke-linecap="round"/>`;
+  // 身體、翅膀
+  s += `<ellipse cx="0" cy="-60" rx="33" ry="29" fill="${body}"/><ellipse cx="11" cy="-52" rx="18" ry="19" fill="${belly}"/>`;
+  s += `<g transform="translate(-4,-70) scale(${wingK})"><path d="M 0 0 Q -42 -12 -62 22 Q -34 18 -12 32 Z" fill="${bodyDark}"/><path d="M -14 8 L -46 16 M -10 16 L -36 26" stroke="${body}" stroke-width="2" fill="none"/></g>`;
+  // 脖子、頭
+  s += `<path d="M 14 -78 Q 24 -96 30 -108" stroke="${body}" stroke-width="17" fill="none" stroke-linecap="round"/>`;
+  const n = p.needs;
+  let hd = '';
+  for (let i = 0; i < crestN; i++) {
+    const a = -100 - (crestN === 1 ? 20 : (i * 60) / (crestN - 1));
+    const len = 10 + 24 * g;
+    hd += `<g transform="translate(-4,-10) rotate(${a.toFixed(1)})"><path d="M 0 0 Q ${len * 0.5} -4 ${len} 0" stroke="${bodyDark}" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="${len}" cy="0" r="${2.5 + 1.5 * g}" fill="${gold}"/>`;
+    if (flame) hd += `<g transform="translate(${len + 2},0) rotate(90)">${flameAt(0, 0, 2 + 2 * g)}</g>`;
+    hd += '</g>';
+  }
+  hd += `<circle cx="0" cy="0" r="15" fill="${body}"/>`;
+  const open = !p.asleep && !p.sick && (n.hunger >= 60 || n.thirst >= 60);
+  hd += open
+    ? `<path d="M 11 -5 L 30 -2 L 12 1 Z" fill="#f2b134"/><path d="M 12 3 L 27 6 L 11 7 Z" fill="#d9952a"/>`
+    : `<path d="M 11 -5 L 30 1 L 11 6 Z" fill="#f2b134"/>`;
+  hd += petEyeSVG(4, -3, eyeR, petEyeState(p, opts.blink), body);
+  if (!p.sick && !p.asleep) hd += `<ellipse cx="2" cy="6" rx="3.5" ry="2" fill="#ff8fa3" opacity="0.45"/>`;
+  if (p.sick) hd += `<path d="M -12 -12 q 3 -6 3 0 a 3 3 0 1 1 -3 0 Z" fill="#9fd8ff"/>`;
+  s += `<g transform="translate(32,-112) scale(${headK})">${hd}</g>`;
+  return { svg: s };
+}
+
+function petDrawPet(p, opts) {
+  if (p.species === 'fox') return petDrawFox(p, opts);
+  if (p.species === 'phoenix') return petDrawPhoenix(p, opts);
+  return petDrawDragon(p, opts);
 }
 
 function petDrawBed() {
@@ -865,8 +1027,8 @@ function pxSprite(key, makeInner, vb, scale) {
 function pxDragonSprite(p, blink, leg) {
   const n = p.needs;
   const expr = [p.asleep, p.sick, n.hunger >= 60, n.fatigue >= 60, n.thirst >= 60].map(Number).join('');
-  const key = `d|${Math.round(p.growth)}|${expr}|${blink ? 1 : 0}|${leg}`;
-  return pxSprite(key, () => petDrawDragon(p, { blink, leg, eyeK: 1.7 }).svg, [-215, -305, 410, 320], pxScale(p));
+  const key = `${p.species || 'dragon'}|${Math.round(p.growth)}|${expr}|${blink ? 1 : 0}|${leg}`;
+  return pxSprite(key, () => petDrawPet(p, { blink, leg, eyeK: 1.7 }).svg, [-215, -305, 410, 320], pxScale(p));
 }
 
 // ---------- 像素小工具 ----------
@@ -1038,7 +1200,7 @@ function pxSeekFood() {
   petEatTarget = best;
   const side = g.x >= p.pos.x ? -1 : 1;
   // 停在嘴巴（朝向那側的頭）剛好碰到食物的位置
-  pxWalkTo(g.x + side * (90 * pxScale(p) + 3), g.y + 1, () => {
+  pxWalkTo(g.x + side * (petSp(p).mouth * pxScale(p) + 3), g.y + 1, () => {
     const i = (p.ground || []).indexOf(g);
     petEatTarget = -1;
     if (i < 0) return;
@@ -1097,7 +1259,7 @@ function petGoBath() {
   pxWalkTo(PX_POND.x + 14, PX_POND.y + 8, () => {
     petBathing = { t: 0, dur: PET_BATH_SECONDS, start: p.needs.dirt };
     petFace = -1;
-    petSay('right', petPick(['⋯⋯哈～水溫剛剛好。', '才、才不是喜歡泡澡呢。', '咕嚕咕嚕咕嚕（三顆頭輪流吐泡泡）']), 7000);
+    petSay('right', petPick(['⋯⋯哈～水溫剛剛好。', '才、才不是喜歡泡澡呢。', petSp(p).bath]), 7000);
     petRender();
   });
 }
@@ -1172,7 +1334,7 @@ function pxDraw(ts) {
   let dx = p.pos.x, dy = p.pos.y, face = petFace;
   if (p.asleep) { dx = PX_BED.x - 8 * fk; dy = PX_BED.y - 36 * fk; face = 1; }
   else if (onToilet) { dx = PX_TOILET.x + 6 * k; dy = PX_TOILET.y - 40 * tk + 14 * k; face = 1; }
-  else if (inBath) { dx = PX_POND.x; dy = waterline + 60 * k; }
+  else if (inBath) { dx = PX_POND.x; dy = waterline + petSp(p).bathDepth * k; }
   const bob = walking ? step : petEating ? Math.floor(ts / 180) % 2 : (p.asleep ? Math.floor(ts / 1600) % 2 : Math.floor(ts / 900) % 2);
   const sortY = p.asleep ? PX_BED.y + 1 : onToilet ? PX_TOILET.y + 1 : inBath ? PX_POND.y : dy;
   ents.push({ y: sortY, draw: () => {
@@ -1260,7 +1422,7 @@ function pxBox(spr, x, y, face) {
 
 function pxLoop(ts) {
   requestAnimationFrame(pxLoop);
-  if (!data.pet || !petPanelActive()) { petLastFrame = ts; return; }
+  if (!data.pet || data.pet.phase !== 'hatched' || !petPanelActive()) { petLastFrame = ts; return; }
   const dt = Math.min(0.1, (ts - petLastFrame) / 1000 || 0);
   petLastFrame = ts;
   pxUpdate(dt, ts);
@@ -1433,6 +1595,8 @@ function petRender() {
   const p = data.pet;
   const now = Date.now();
 
+  if (p.phase === 'choose') { petRenderChooser(panel); return; }
+
   const speech = petSpeech && petSpeech.until > now ? petSpeech : petAutoSpeech(p);
 
   // 畫布只建一次，之後只換文字資訊，畫面才不會閃
@@ -1442,7 +1606,7 @@ function petRender() {
         <div class="pet-left">
           <div class="pet-stage"><canvas id="pet-canvas" class="pet-canvas" width="${PX_W}" height="${PX_H}"></canvas></div>
           <div class="pet-stage-bar">
-            <p class="pet-note pet-stage-hint">點地面＝走過去・點床＝睡覺／叫醒・點馬桶＝上廁所・點龍＝摸摸・點湖＝泡澡・點便便＝清掉</p>
+            <p class="pet-note pet-stage-hint">點地面＝走過去・點床＝睡覺／叫醒・點馬桶＝上廁所・點牠＝摸摸・點湖＝泡澡・點便便＝清掉</p>
             <button class="pet-mode-btn" id="pet-mode-btn"></button>
           </div>
           <div id="pet-body"></div>
@@ -1478,11 +1642,11 @@ function petRender() {
     const { rate, limits } = petGrowthRate(p);
     const status = p.sick ? '🤒 生病中' : p.asleep ? '💤 睡覺中' : '☀️ 醒著';
 
-    head += `<div class="panel-head"><h1 class="pet-name" id="pet-name" title="點一下改名">${petEsc(p.name || '三頭龍（點我取名）')}</h1><span class="pet-chip">${st.name}・Lv ${lv}</span></div>`;
+    head += `<div class="panel-head"><h1 class="pet-name" id="pet-name" title="點一下改名">${petEsc(p.name || `${petSp(p).name}（點我取名）`)}</h1><span class="pet-chip">${st.name}・Lv ${lv}</span></div>`;
     if (!p.name || petRenaming) {
       head += `<div class="pet-naming"><input type="text" id="pet-name-input" maxlength="12" placeholder="幫牠取個名字" value="${petEsc(p.name)}"><button class="btn primary small" id="pet-name-save">取名</button></div>`;
     }
-    html += `<div class="pet-speech"><b>${PET_HEADS[speech.head] || ''}</b>${speech.head ? '：' : ''}${petEsc(speech.text)}</div>`;
+    html += `<div class="pet-speech"><b>${petSp(p).voices[speech.head] || ''}</b>${speech.head ? '：' : ''}${petEsc(speech.text)}</div>`;
 
     html += `<div class="pet-grid">`;
     html += `<div class="pet-card"><div class="pet-card-title">狀態 <span class="pet-sub">${status}・${petFmtAge(now - p.hatchedAt)}大</span></div>`;
@@ -1504,7 +1668,7 @@ function petRender() {
       </div>
       ${petBar(`Lv ${lv} → ${Math.min(100, lv + 1)}`, lvProg, 'good')}
       <p class="pet-note">目前成長速度：每小時 +${rate.toFixed(3)}${limits.length ? `　<span class="pet-limit">受限：${petEsc(limits.join('、'))}</span>` : '　狀態完美'}</p>
-      <p class="pet-note">下一階段：${(() => { const nx = PET_STAGES.find((s) => s.min > p.growth); return nx ? `${nx.name}（還差 ${(nx.min - p.growth).toFixed(1)}）` : '已是最終型態'; })()}</p>
+      <p class="pet-note">下一階段：${(() => { const nx = petStages(p).find((s) => s.min > p.growth); return nx ? `${nx.name}（還差 ${(nx.min - p.growth).toFixed(1)}）` : '已是最終型態'; })()}</p>
     </div>`;
   }
 
@@ -1545,6 +1709,11 @@ function petRender() {
   html += `<li>大約每 3–4 小時照顧一次（一天 4–5 次）最剛好，一天大約要花 110 🪙</li>`;
   html += `</ul></details>`;
 
+  // 重新開始
+  html += `<details class="pet-card pet-details"><summary class="pet-card-title">重新開始</summary>
+    <p class="pet-note" style="margin-top:0">換一隻寵物從頭養。金幣和背包會保留，現在的${petEsc(petSp(p).name)}${p.name ? `「${petEsc(p.name)}」` : ''}會離開。</p>
+    <button class="btn small" id="pet-btn-restart">${petRestartArmed > Date.now() ? '確定要重新開始？再按一次' : '重新開始，選新的寵物'}</button></details>`;
+
   // 紀錄
   html += `<details class="pet-card pet-details"><summary class="pet-card-title">成長日記</summary><div class="pet-log">`;
   for (const e of p.log.slice(0, 30)) {
@@ -1565,6 +1734,12 @@ function petRender() {
   body.querySelectorAll('details').forEach((d, i) => { if (openDetails[i]) d.open = true; });
 
   const on = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
+  on('pet-btn-restart', () => {
+    if (petRestartArmed > Date.now()) { petRestart(); return; }
+    petRestartArmed = Date.now() + 5000;   // 5 秒內再按一次才算數
+    petRender();
+    setTimeout(() => { if (petRestartArmed && petRestartArmed <= Date.now()) petRender(); }, 5100);
+  });
   on('pet-name', () => { petRenaming = true; petRender(); const el = document.getElementById('pet-name-input'); if (el) el.focus(); });
   const saveName = () => {
     const val = document.getElementById('pet-name-input').value.trim();
@@ -1581,6 +1756,69 @@ function petRender() {
 }
 
 // 只在畫面需要時重畫，避免動畫每 30 秒被重設
+// ---------- 開局選寵物 ----------
+let petRestartArmed = 0;
+
+function petRenderChooser(panel) {
+  let html = `<div class="panel-head"><h1>選一隻寵物</h1></div>
+    <p class="pet-note" style="margin:-8px 0 16px">從蛋開始養，照顧得好會一點一點長大。選了之後就不能換，除非重新開始。</p>
+    <div class="pet-choose-grid">`;
+  for (const [key, sp] of Object.entries(PET_SPECIES)) {
+    html += `<div class="pet-card pet-choose">
+      <canvas class="pet-choose-canvas" data-species="${key}" width="150" height="104"></canvas>
+      <div class="pet-choose-name">${sp.name}</div>
+      <div class="pet-choose-stages">${sp.stages[0]} → ${sp.stages[5]}</div>
+      <p class="pet-note">${sp.desc}</p>
+      <button class="btn primary" data-choose="${key}">就是牠</button>
+    </div>`;
+  }
+  html += `</div>`;
+  panel.innerHTML = html;
+  // 預覽：畫成年前的樣子
+  panel.querySelectorAll('.pet-choose-canvas').forEach((cv) => {
+    const fake = { ...structuredClone(data.pet), species: cv.dataset.species, phase: 'hatched', growth: 520, asleep: false, sick: false,
+      needs: { fatigue: 10, hunger: 10, thirst: 10, bladder: 10, bowel: 10, dirt: 10 } };
+    const spr = pxSprite(`preview|${fake.species}`, () => petDrawPet(fake, { eyeK: 1.5 }).svg, [-215, -305, 410, 320], 0.3);
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    const [bx0, by0, bx1, by1] = spr.bbox;
+    const w = bx1 - bx0, h = by1 - by0;
+    c.drawImage(spr.canvas, bx0, by0, w, h, Math.round((cv.width - w) / 2), Math.round(cv.height - h - 4), w, h);
+  });
+  panel.querySelectorAll('[data-choose]').forEach((b) => b.addEventListener('click', () => petChoose(b.dataset.choose)));
+}
+
+function petChoose(species) {
+  const p = data.pet;
+  p.species = species;
+  p.phase = 'egg';
+  p.createdAt = p.hatchAt = p.lastSim = Date.now();
+  petSimulate();   // 直接破殼
+  petLastStageKey = '';
+  persist();
+  petRender();
+  petUpdateTabBadge();
+}
+
+function petRestart() {
+  const old = data.pet;
+  const p = petNewEgg();
+  p.phase = 'choose';
+  // 金幣、背包、今天已領過的任務獎勵、黑白設定都留著
+  p.coins = old.coins || 0;
+  p.inventory = old.inventory || {};
+  p.rewarded = old.rewarded || {};
+  p.bonusDays = old.bonusDays || {};
+  if (old.mono !== undefined) p.mono = old.mono;
+  data.pet = p;
+  petRestartArmed = 0;
+  petMove = null; petEating = null; petBathing = null;
+  petLog(`告別了${petSp(old).name}${old.name ? `「${old.name}」` : ''}，重新開始`);
+  persist();
+  petRender();
+  petUpdateTabBadge();
+}
+
 function petRenderIfChanged() {
   const p = data.pet;
   const key = [
@@ -1607,7 +1845,9 @@ async function petTick() {
 function petInit() {
   if (!data.pet) {
     data.pet = petNewEgg();
-    petLog('撿到一顆溫溫的龍蛋，裡面好像有三個心跳');
+    data.pet.phase = 'choose';
+  } else if (!data.pet.species && data.pet.phase !== 'choose') {
+    data.pet.species = 'dragon';
   }
   // 舊版「待選獎勵」換成金幣
   if (data.pet.pendingPicks && data.pet.pendingPicks.length) {

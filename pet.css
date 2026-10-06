@@ -158,3 +158,15 @@ body.pet-dragging, body.pet-dragging * { cursor: grabbing !important; user-selec
 .pet-buy-name { font-size: 12px; }
 .pet-buy-price { font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .pet-buy .pet-pick-rec { top: 2px; right: 2px; }
+
+/* 開局選寵物 */
+.pet-choose-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+@media (max-width: 760px) { .pet-choose-grid { grid-template-columns: 1fr; } }
+.pet-choose { display: flex; flex-direction: column; gap: 6px; margin: 0; }
+.pet-choose-canvas {
+  width: 100%; height: auto; image-rendering: pixelated; image-rendering: crisp-edges;
+  background: #bfe3f5; border: 2px solid var(--text-primary);
+}
+.pet-choose-name { font-size: 18px; font-weight: 700; margin-top: 6px; }
+.pet-choose-stages { font-size: 12px; color: var(--text-muted); }
+.pet-choose .pet-note { flex: 1; margin: 2px 0 8px; line-height: 1.6; }
