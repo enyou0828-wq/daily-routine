@@ -84,6 +84,12 @@ const PET_SPECIES = {
 };
 const PET_STAGE_MINS = [0, 60, 200, 420, 680, 900];
 function petSp(p) { return PET_SPECIES[(p && p.species) || 'dragon']; }
+// 對話框前面顯示誰在說話：有取名就用名字；三頭龍再標是哪顆頭
+function petSpeaker(p, head) {
+  const voice = petSp(p).voices[head] || '';
+  if (!p.name || !head) return voice;
+  return p.species === 'dragon' || !p.species ? `${p.name}・${voice}` : p.name;
+}
 function petStages(p) { return PET_STAGE_MINS.map((min, i) => ({ min, name: petSp(p).stages[i] })); }
 
 // effect: 直接加到 pet 上的差值；需求值負數 = 滿足
@@ -125,7 +131,7 @@ const PET_ITEMS = {
 };
 
 // 金幣：完成任務賺，拿去商店買
-const PET_COIN_PER_TASK = 10;
+const PET_COIN_PER_TASK = 15;
 const PET_COIN_ALL_DONE = 30;
 const PET_SHOP = [
   ['water', 5], ['olive', 8], ['sweetpotato', 10], ['multivit', 10], ['ironore', 10], ['chicken', 12],
@@ -1646,7 +1652,7 @@ function petRender() {
     if (!p.name || petRenaming) {
       head += `<div class="pet-naming"><input type="text" id="pet-name-input" maxlength="12" placeholder="幫牠取個名字" value="${petEsc(p.name)}"><button class="btn primary small" id="pet-name-save">取名</button></div>`;
     }
-    html += `<div class="pet-speech"><b>${petSp(p).voices[speech.head] || ''}</b>${speech.head ? '：' : ''}${petEsc(speech.text)}</div>`;
+    html += `<div class="pet-speech"><b>${petEsc(petSpeaker(p, speech.head))}</b>${speech.head ? '：' : ''}${petEsc(speech.text)}</div>`;
 
     html += `<div class="pet-grid">`;
     html += `<div class="pet-card"><div class="pet-card-title">狀態 <span class="pet-sub">${status}・${petFmtAge(now - p.hatchedAt)}大</span></div>`;
